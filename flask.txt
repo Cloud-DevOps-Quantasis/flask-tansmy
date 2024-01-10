@@ -1,0 +1,43 @@
+pipelines:
+  branches:
+    master:
+      - step:
+          name: Install Dependencies and Build
+          image: python:3.8
+          caches:
+            - venv
+          deployment: test
+          script:
+            - apt-get update
+            - apt-get install -y zip
+            - python3.8 --version
+            - python3.8 -m pip install virtualenv
+            - virtualenv venv
+            - source venv/bin/activate
+            - pip3 install -r requirements.txt
+            - git remote add auth https://TansyNorepl1:USsSpT543bqHuueHfabj@bitbucket.org/tansyteam/tss_flask_auth.git
+            - git fetch auth
+            - git checkout auth/master resources
+            - git remote add common_library https://TansyNorepl1:USsSpT543bqHuueHfabj@bitbucket.org/tansyteam/tss_flask_common_library.git
+            - git fetch common_library
+            - git checkout common_library/master resources
+            - zip -r function.zip .
+          artifacts:
+            - function.zip
+
+      - step:
+          name: Deploy ZIP to Azure
+          deployment: Production
+          script:
+            - pipe: microsoft/azure-functions-deploy:1.0.0
+              variables:
+                AZURE_APP_ID: $AZURE_APP_ID
+                AZURE_PASSWORD: $AZURE_PASSWORD
+                AZURE_TENANT_ID: $AZURE_TENANT_ID
+                AZURE_RESOURCE_GROUP: $AZURE_RESOURCE_GROUP
+                ZIP_FILE: 'function.zip'
+                FUNCTION_APP_NAME: $FUNCTION_APP_NAME
+
+definitions:
+  caches:
+    venv: $BITBUCKET_CLONE_DIR/venv
